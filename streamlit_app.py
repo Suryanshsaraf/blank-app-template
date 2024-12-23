@@ -8,7 +8,7 @@ from sklearn.metrics import classification_report, accuracy_score, confusion_mat
 import numpy as np
 
 # Load dataset
-data = pd.read_csv('updated_dataset1.csv')
+data = pd.read_csv('https://github.com/Suryanshsaraf/blank-app-template/blob/a15e8c6b406c0f92c98c0ed9fa724621d74ec34e/updated_dataset1.csv')
 
 # Set up Streamlit app
 st.set_page_config(page_title="AI-Integrated Dataset Dashboard", layout="wide")
