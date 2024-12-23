@@ -9,7 +9,7 @@ st.info('This is app builds a machine learning model!')
 
 with st.expander('Data'):
   st.write('**Raw data**')
-  df = pd.read_csv('updated_dataset1.csv')
+  df = pd.read_csv('https://github.com/Suryanshsaraf/blank-app-template/blob/aeba4b263c7fdf44d414971e4a62475e5b4860c6/updated_dataset1.csv')
   df
 
   st.write('**X**')
