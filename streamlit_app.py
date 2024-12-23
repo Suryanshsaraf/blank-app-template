@@ -63,24 +63,28 @@ elif selection == "AI Model":
     X = data[features]
     y = data['Placed']
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    # Handle missing values if necessary
+    if X.isnull().any().any() or y.isnull().any():
+        st.warning("Warning: There are missing values in the dataset. Please handle them before training the model.")
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-    # Model Training
-    model = RandomForestClassifier(random_state=42)
-    model.fit(X_train, y_train)
+        # Model Training
+        model = RandomForestClassifier(random_state=42)
+        model.fit(X_train, y_train)
 
-    # Evaluation
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f"### Model Accuracy: {accuracy:.2f}")
+        # Evaluation
+        y_pred = model.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        st.write(f"### Model Accuracy: {accuracy:.2f}")
 
-    st.write("### Classification Report")
-    st.text(classification_report(y_test, y_pred))
+        st.write("### Classification Report")
+        st.text(classification_report(y_test, y_pred))
 
-    st.write("### Confusion Matrix")
-    fig, ax = plt.subplots()
-    sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, cmap="Blues", fmt='d', ax=ax)
-    st.pyplot(fig)
+        st.write("### Confusion Matrix")
+        fig, ax = plt.subplots()
+        sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, cmap="Blues", fmt='d', ax=ax)
+        st.pyplot(fig)
 
 elif selection == "Predictions":
     st.header("Make Predictions")
@@ -90,15 +94,4 @@ elif selection == "Predictions":
     input_data = {
         'ssc_p': st.number_input("SSC Percentage", min_value=0.0, max_value=100.0, value=70.0),
         'hsc_p': st.number_input("HSC Percentage", min_value=0.0, max_value=100.0, value=75.0),
-        'degree_p': st.number_input("Degree Percentage", min_value=0.0, max_value=100.0, value=80.0),
-        'etest_p': st.number_input("E-Test Percentage", min_value=0.0, max_value=100.0, value=60.0),
-        'mba_p': st.number_input("MBA Percentage", min_value=0.0, max_value=100.0, value=85.0),
-    }
-
-    input_df = pd.DataFrame([input_data])
-
-    if st.button("Predict Placement Status"):
-        prediction = model.predict(input_df)[0]
-        status = "Placed" if prediction == 1 else "Not Placed"
-        st.write(f"### Prediction: {status}")
-
+        'degree_p': st.number_input("Degree Percentage", min_value=0.0, max_value=100.
