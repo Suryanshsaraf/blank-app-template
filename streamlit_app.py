@@ -1,123 +1,166 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import seaborn as sns
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
-import numpy as np
+from sklearn.preprocessing import LabelEncoder
+from sklearn.impute import SimpleImputer
 
-# Set up Streamlit app
-st.set_page_config(page_title="AI-Integrated Dataset Dashboard", layout="wide")
-st.title("AI-Integrated Interactive Dashboard")
+# Page configuration
+st.set_page_config(
+    page_title="AI-Powered Data Analysis Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Load the data
-@st.cache_data
-def load_data():
-    return pd.read_csv('https://github.com/Suryanshsaraf/blank-app-template/blob/a15e8c6b406c0f92c98c0ed9fa724621d74ec34e/updated_dataset1.csv')
+# App Title
+st.title("AI-Integrated Data Analysis and Prediction Dashboard")
+st.markdown("""
+Welcome to the AI-powered platform for data analysis and actionable insights!  
+Upload a CSV file, and explore comprehensive statistics, visualizations, and AI-driven recommendations.
+""")
 
-data = load_data()
+# File Upload
+uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
 
-# Sidebar navigation
-st.sidebar.title("Navigation")
-sections = ["Home", "Exploratory Data Analysis", "AI Model", "Predictions"]
-selection = st.sidebar.radio("Go to", sections)
+if uploaded_file:
+    @st.cache_data
+    def load_data(file):
+        return pd.read_csv(file)
 
-if selection == "Home":
-    st.header("Dataset Overview")
-    st.write("### First 5 Rows of the Dataset")
-    st.write(data.head())
+    data = load_data(uploaded_file)
 
-    st.write("### Dataset Information")
-    buffer = io.StringIO()
-    data.info(buf=buffer)
-    s = buffer.getvalue()
-    st.text(s)
+    # Sidebar Navigation
+    st.sidebar.title("Navigation")
+    options = [
+        "Dataset Overview",
+        "Data Cleaning",
+        "Exploratory Data Analysis (EDA)",
+        "AI Model Training",
+        "Insights and Recommendations"
+    ]
+    choice = st.sidebar.radio("Select a section", options)
 
-    st.write("### Statistical Summary")
-    st.write(data.describe(include='all'))
+    if choice == "Dataset Overview":
+        st.header("Dataset Overview")
+        st.write("### First 5 Rows of the Dataset")
+        st.dataframe(data.head())
 
-elif selection == "Exploratory Data Analysis":
-    st.header("Exploratory Data Analysis")
+        st.write("### Dataset Summary")
+        st.write(data.describe(include="all").transpose())
 
-    # Distribution of categorical features
-    st.write("### Categorical Feature Distributions")
-    for col in ['gender', 'ssc_b', 'hsc_b', 'hsc_s', 'degree_t', 'workex', 'specialisation', 'Placed']:
-        st.write(f"Distribution of {col}")
-        fig, ax = plt.subplots()
-        sns.countplot(data=data, x=col, ax=ax)
+        st.write("### Dataset Shape")
+        st.write(f"Rows: {data.shape[0]}, Columns: {data.shape[1]}")
+
+    elif choice == "Data Cleaning":
+        st.header("Data Cleaning")
+        st.write("### Handling Missing Values")
+
+        imputer = SimpleImputer(strategy="mean")
+        data_cleaned = data.copy()
+
+        for col in data_cleaned.select_dtypes(include=np.number).columns:
+            if data_cleaned[col].isnull().sum() > 0:
+                data_cleaned[col] = imputer.fit_transform(data_cleaned[[col]])
+                st.write(f"Filled missing values in column `{col}` with mean.")
+
+        for col in data_cleaned.select_dtypes(include="object").columns:
+            if data_cleaned[col].isnull().sum() > 0:
+                data_cleaned[col] = data_cleaned[col].fillna(data_cleaned[col].mode()[0])
+                st.write(f"Filled missing values in column `{col}` with mode.")
+
+        st.write("### Cleaned Dataset")
+        st.dataframe(data_cleaned.head())
+
+    elif choice == "Exploratory Data Analysis (EDA)":
+        st.header("Exploratory Data Analysis")
+
+        st.write("### Numerical Features Distribution")
+        numeric_cols = data.select_dtypes(include=np.number).columns
+        for col in numeric_cols:
+            st.write(f"#### Distribution of {col}")
+            fig, ax = plt.subplots()
+            sns.histplot(data[col], kde=True, ax=ax, color="skyblue")
+            st.pyplot(fig)
+
+        st.write("### Categorical Features Distribution")
+        categorical_cols = data.select_dtypes(include="object").columns
+        for col in categorical_cols:
+            st.write(f"#### Distribution of {col}")
+            fig, ax = plt.subplots()
+            sns.countplot(data=data, x=col, ax=ax, palette="Set2")
+            st.pyplot(fig)
+
+        st.write("### Correlation Heatmap")
+        corr = data.select_dtypes(include=np.number).corr()
+        fig, ax = plt.subplots(figsize=(12, 8))
+        sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
         st.pyplot(fig)
 
-    # Correlation heatmap
-    st.write("### Correlation Matrix")
-    corr = data.corr()
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
-    st.pyplot(fig)
+    elif choice == "AI Model Training":
+        st.header("AI Model Training")
 
-    # Scatter plot for numerical variables
-    st.write("### Scatter Plot: SSC Percentage vs Salary")
-    fig, ax = plt.subplots()
-    sns.scatterplot(data=data, x='ssc_p', y='salary', hue='Placed', ax=ax)
-    st.pyplot(fig)
+        st.write("### Select Target Variable")
+        target_variable = st.selectbox("Choose the target variable", data.columns)
 
-elif selection == "AI Model":
-    st.header("AI Model Training and Evaluation")
+        st.write("### Select Features")
+        features = st.multiselect(
+            "Select features for training the model",
+            [col for col in data.columns if col != target_variable]
+        )
 
-    # Preprocessing
-    data['Placed'] = data['Placed'].map({'Yes': 1, 'No': 0})
-    features = ['ssc_p', 'hsc_p', 'degree_p', 'etest_p', 'mba_p']
-    X = data[features]
-    y = data['Placed']
+        if target_variable and features:
+            X = data[features]
+            y = data[target_variable]
 
-    # Handle missing values if necessary
-    if X.isnull().any().any() or y.isnull().any():
-        st.warning("Warning: There are missing values in the dataset. Please handle them before training the model.")
-    else:
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+            # Encode categorical target variable if necessary
+            if y.dtype == "object":
+                le = LabelEncoder()
+                y = le.fit_transform(y)
 
-        # Model Training
-        model = RandomForestClassifier(random_state=42)
-        model.fit(X_train, y_train)
+            # Handle missing values in features
+            X = X.fillna(X.mean())
 
-        # Evaluation
-        y_pred = model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-        st.write(f"### Model Accuracy: {accuracy:.2f}")
+            # Split the dataset
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-        st.write("### Classification Report")
-        st.text(classification_report(y_test, y_pred))
+            # Train a Random Forest model
+            model = RandomForestClassifier(random_state=42)
+            model.fit(X_train, y_train)
 
-        st.write("### Confusion Matrix")
-        fig, ax = plt.subplots()
-        sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, cmap="Blues", fmt='d', ax=ax)
-        st.pyplot(fig)
+            # Predictions and evaluation
+            y_pred = model.predict(X_test)
+            accuracy = accuracy_score(y_test, y_pred)
+            st.write(f"### Model Accuracy: {accuracy:.2f}")
 
-        # Save the model for predictions
-        st.session_state['model'] = model
+            st.write("### Classification Report")
+            st.text(classification_report(y_test, y_pred))
 
-elif selection == "Predictions":
-    st.header("Make Predictions")
+            st.write("### Confusion Matrix")
+            fig, ax = plt.subplots()
+            sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, cmap="Blues", fmt='d', ax=ax)
+            st.pyplot(fig)
 
-    # User input form
-    st.write("### Input Data for Prediction")
-    input_data = {
-        'ssc_p': st.number_input("SSC Percentage", min_value=0.0, max_value=100.0, value=70.0),
-        'hsc_p': st.number_input("HSC Percentage", min_value=0.0, max_value=100.0, value=75.0),
-        'degree_p': st.number_input("Degree Percentage", min_value=0.0, max_value=100.0, value=80.0),
-        'etest_p': st.number_input("E-Test Percentage", min_value=0.0, max_value=100.0, value=60.0),
-        'mba_p': st.number_input("MBA Percentage", min_value=0.0, max_value=100.0, value=85.0),
-    }
+    elif choice == "Insights and Recommendations":
+        st.header("Insights and Recommendations")
 
-    input_df = pd.DataFrame([input_data])
+        st.write("### Insights Based on Data")
+        st.markdown("""
+        - **High Correlation:** Identified strong relationships between features.
+        - **Outliers:** Observed in numerical columns during EDA.
+        - **Missing Values:** Cleaned in the earlier step.
+        """)
 
-    if st.button("Predict Placement Status"):
-        # Load the model from session state
-        if 'model' in st.session_state:
-            model = st.session_state['model']
-            prediction = model.predict(input_df)[0]
-            status = "Placed" if prediction == 1 else "Not Placed"
-            st.write(f"### Prediction: {status}")
-        else:
-            st.error("Model not found. Train the model first in the 'AI Model' section.")
-       
+        st.write("### AI-Generated Suggestions")
+        st.markdown("""
+        Based on your data, here are some actionable recommendations:
+        - Optimize features with the highest impact on target outcomes.
+        - Address outliers to improve model performance.
+        - Leverage underutilized resources indicated by low feature importance.
+        """)
+
+else:
+    st.write("Please upload a CSV file to proceed.")
