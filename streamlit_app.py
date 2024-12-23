@@ -1,122 +1,104 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+import numpy as np
 
-st.title('🤖 Machine Learning App')
+# Load dataset
+data = pd.read_csv('updated_dataset1.csv')
 
-st.info('This is app builds a machine learning model!')
+# Set up Streamlit app
+st.set_page_config(page_title="AI-Integrated Dataset Dashboard", layout="wide")
+st.title("AI-Integrated Interactive Dashboard")
 
-with st.expander('Data'):
-  st.write('**Raw data**')
-  df = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/penguins_cleaned.csv')
-  df
+# Sidebar navigation
+st.sidebar.title("Navigation")
+sections = ["Home", "Exploratory Data Analysis", "AI Model", "Predictions"]
+selection = st.sidebar.radio("Go to", sections)
 
-  st.write('**X**')
-  X_raw = df.drop('species', axis=1)
-  X_raw
+if selection == "Home":
+    st.header("Dataset Overview")
+    st.write("### First 5 Rows of the Dataset")
+    st.write(data.head())
 
-  st.write('**y**')
-  y_raw = df.species
-  y_raw
+    st.write("### Dataset Information")
+    st.write(data.info())
 
-with st.expander('Data visualization'):
-  st.scatter_chart(data=df, x='bill_length_mm', y='body_mass_g', color='species')
+    st.write("### Statistical Summary")
+    st.write(data.describe(include='all'))
 
-# Input features
-with st.sidebar:
-  st.header('Input features')
-  island = st.selectbox('Island', ('Biscoe', 'Dream', 'Torgersen'))
-  bill_length_mm = st.slider('Bill length (mm)', 32.1, 59.6, 43.9)
-  bill_depth_mm = st.slider('Bill depth (mm)', 13.1, 21.5, 17.2)
-  flipper_length_mm = st.slider('Flipper length (mm)', 172.0, 231.0, 201.0)
-  body_mass_g = st.slider('Body mass (g)', 2700.0, 6300.0, 4207.0)
-  gender = st.selectbox('Gender', ('male', 'female'))
-  
-  # Create a DataFrame for the input features
-  data = {'island': island,
-          'bill_length_mm': bill_length_mm,
-          'bill_depth_mm': bill_depth_mm,
-          'flipper_length_mm': flipper_length_mm,
-          'body_mass_g': body_mass_g,
-          'sex': gender}
-  input_df = pd.DataFrame(data, index=[0])
-  input_penguins = pd.concat([input_df, X_raw], axis=0)
+elif selection == "Exploratory Data Analysis":
+    st.header("Exploratory Data Analysis")
 
-with st.expander('Input features'):
-  st.write('**Input penguin**')
-  input_df
-  st.write('**Combined penguins data**')
-  input_penguins
+    # Distribution of categorical features
+    st.write("### Categorical Feature Distributions")
+    for col in ['gender', 'ssc_b', 'hsc_b', 'hsc_s', 'degree_t', 'workex', 'specialisation', 'Placed']:
+        st.write(f"Distribution of {col}")
+        fig, ax = plt.subplots()
+        sns.countplot(data=data, x=col, ax=ax)
+        st.pyplot(fig)
 
+    # Correlation heatmap
+    st.write("### Correlation Matrix")
+    corr = data.corr()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
+    st.pyplot(fig)
 
-# Data preparation
-# Encode X
-encode = ['island', 'sex']
-df_penguins = pd.get_dummies(input_penguins, prefix=encode)
+    # Scatter plot for numerical variables
+    st.write("### Scatter Plot: SSC Percentage vs Salary")
+    fig, ax = plt.subplots()
+    sns.scatterplot(data=data, x='ssc_p', y='salary', hue='Placed', ax=ax)
+    st.pyplot(fig)
 
-X = df_penguins[1:]
-input_row = df_penguins[:1]
+elif selection == "AI Model":
+    st.header("AI Model Training and Evaluation")
 
-# Encode y
-target_mapper = {'Adelie': 0,
-                 'Chinstrap': 1,
-                 'Gentoo': 2}
-def target_encode(val):
-  return target_mapper[val]
+    # Preprocessing
+    data['Placed'] = data['Placed'].map({'Yes': 1, 'No': 0})
+    features = ['ssc_p', 'hsc_p', 'degree_p', 'etest_p', 'mba_p']
+    X = data[features]
+    y = data['Placed']
 
-y = y_raw.apply(target_encode)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-with st.expander('Data preparation'):
-  st.write('**Encoded X (input penguin)**')
-  input_row
-  st.write('**Encoded y**')
-  y
+    # Model Training
+    model = RandomForestClassifier(random_state=42)
+    model.fit(X_train, y_train)
 
+    # Evaluation
+    y_pred = model.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    st.write(f"### Model Accuracy: {accuracy:.2f}")
 
-# Model training and inference
-## Train the ML model
-clf = RandomForestClassifier()
-clf.fit(X, y)
+    st.write("### Classification Report")
+    st.text(classification_report(y_test, y_pred))
 
-## Apply model to make predictions
-prediction = clf.predict(input_row)
-prediction_proba = clf.predict_proba(input_row)
+    st.write("### Confusion Matrix")
+    fig, ax = plt.subplots()
+    sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, cmap="Blues", fmt='d', ax=ax)
+    st.pyplot(fig)
 
-df_prediction_proba = pd.DataFrame(prediction_proba)
-df_prediction_proba.columns = ['Adelie', 'Chinstrap', 'Gentoo']
-df_prediction_proba.rename(columns={0: 'Adelie',
-                                 1: 'Chinstrap',
-                                 2: 'Gentoo'})
+elif selection == "Predictions":
+    st.header("Make Predictions")
 
-# Display predicted species
-st.subheader('Predicted Species')
-st.dataframe(df_prediction_proba,
-             column_config={
-               'Adelie': st.column_config.ProgressColumn(
-                 'Adelie',
-                 format='%f',
-                 width='medium',
-                 min_value=0,
-                 max_value=1
-               ),
-               'Chinstrap': st.column_config.ProgressColumn(
-                 'Chinstrap',
-                 format='%f',
-                 width='medium',
-                 min_value=0,
-                 max_value=1
-               ),
-               'Gentoo': st.column_config.ProgressColumn(
-                 'Gentoo',
-                 format='%f',
-                 width='medium',
-                 min_value=0,
-                 max_value=1
-               ),
-             }, hide_index=True)
+    # User input form
+    st.write("### Input Data for Prediction")
+    input_data = {
+        'ssc_p': st.number_input("SSC Percentage", min_value=0.0, max_value=100.0, value=70.0),
+        'hsc_p': st.number_input("HSC Percentage", min_value=0.0, max_value=100.0, value=75.0),
+        'degree_p': st.number_input("Degree Percentage", min_value=0.0, max_value=100.0, value=80.0),
+        'etest_p': st.number_input("E-Test Percentage", min_value=0.0, max_value=100.0, value=60.0),
+        'mba_p': st.number_input("MBA Percentage", min_value=0.0, max_value=100.0, value=85.0),
+    }
 
+    input_df = pd.DataFrame([input_data])
 
-penguins_species = np.array(['Adelie', 'Chinstrap', 'Gentoo'])
-st.success(str(penguins_species[prediction][0]))
+    if st.button("Predict Placement Status"):
+        prediction = model.predict(input_df)[0]
+        status = "Placed" if prediction == 1 else "Not Placed"
+        st.write(f"### Prediction: {status}")
 
