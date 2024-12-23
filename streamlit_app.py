@@ -96,4 +96,12 @@ elif selection == "Predictions":
         'hsc_p': st.number_input("HSC Percentage", min_value=0.0, max_value=100.0, value=75.0),
         'degree_p': st.number_input("Degree Percentage", min_value=0.0, max_value=100.0, value=80.0),
         'etest_p': st.number_input("E-Test Percentage", min_value=0.0, max_value=100.0, value=60.0),
-        'mba_p': st.number_input("MBA Percentage", min_value=0.0, max_value=100
+        'mba_p': st.number_input("MBA Percentage", min_value=0.0, max_value=100.0, value=85.0),
+    }
+
+    input_df = pd.DataFrame([input_data])
+
+    if st.button("Predict Placement Status"):
+        prediction = model.predict(input_df)[0]
+        status = "Placed" if prediction == 1 else "Not Placed"
+       
