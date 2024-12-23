@@ -7,13 +7,16 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 import numpy as np
 
-data = pd.read_csv('https://github.com/Suryanshsaraf/blank-app-template/blob/a15e8c6b406c0f92c98c0ed9fa724621d74ec34e/updated_dataset1.csv')
-st.write(data.head())
-
-
 # Set up Streamlit app
 st.set_page_config(page_title="AI-Integrated Dataset Dashboard", layout="wide")
 st.title("AI-Integrated Interactive Dashboard")
+
+# Load the data
+@st.cache_data
+def load_data():
+    return pd.read_csv('https://github.com/Suryanshsaraf/blank-app-template/blob/a15e8c6b406c0f92c98c0ed9fa724621d74ec34e/updated_dataset1.csv')
+
+data = load_data()
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
@@ -26,7 +29,10 @@ if selection == "Home":
     st.write(data.head())
 
     st.write("### Dataset Information")
-    st.write(data.info())
+    buffer = io.StringIO()
+    data.info(buf=buffer)
+    s = buffer.getvalue()
+    st.text(s)
 
     st.write("### Statistical Summary")
     st.write(data.describe(include='all'))
@@ -87,6 +93,9 @@ elif selection == "AI Model":
         sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, cmap="Blues", fmt='d', ax=ax)
         st.pyplot(fig)
 
+        # Save the model for predictions
+        st.session_state['model'] = model
+
 elif selection == "Predictions":
     st.header("Make Predictions")
 
@@ -103,6 +112,12 @@ elif selection == "Predictions":
     input_df = pd.DataFrame([input_data])
 
     if st.button("Predict Placement Status"):
-        prediction = model.predict(input_df)[0]
-        status = "Placed" if prediction == 1 else "Not Placed"
+        # Load the model from session state
+        if 'model' in st.session_state:
+            model = st.session_state['model']
+            prediction = model.predict(input_df)[0]
+            status = "Placed" if prediction == 1 else "Not Placed"
+            st.write(f"### Prediction: {status}")
+        else:
+            st.error("Model not found. Train the model first in the 'AI Model' section.")
        
