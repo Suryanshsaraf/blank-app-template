@@ -94,4 +94,6 @@ elif selection == "Predictions":
     input_data = {
         'ssc_p': st.number_input("SSC Percentage", min_value=0.0, max_value=100.0, value=70.0),
         'hsc_p': st.number_input("HSC Percentage", min_value=0.0, max_value=100.0, value=75.0),
-        'degree_p': st.number_input("Degree Percentage", min_value=0.0, max_value=100.
+        'degree_p': st.number_input("Degree Percentage", min_value=0.0, max_value=100.0, value=80.0),
+        'etest_p': st.number_input("E-Test Percentage", min_value=0.0, max_value=100.0, value=60.0),
+        'mba_p': st.number_input("MBA Percentage", min_value=0.0, max_value=100
