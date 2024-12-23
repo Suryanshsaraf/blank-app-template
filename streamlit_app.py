@@ -1,4 +1,3 @@
-source venv/bin/activate
 import streamlit as st
 import pandas as pd
 import seaborn as sns
