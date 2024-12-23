@@ -9,8 +9,6 @@ import numpy as np
 
 # Load dataset
 data = pd.read_csv('https://github.com/Suryanshsaraf/blank-app-template/blob/a15e8c6b406c0f92c98c0ed9fa724621d74ec34e/updated_dataset1.csv')
-import pandas as pd
-data = pd.read_csv(url)
 st.write(data.head())
 
 
